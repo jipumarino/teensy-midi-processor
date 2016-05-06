@@ -202,10 +202,13 @@ void onRealTimeSystem(byte msg) {
   }
 
   if(msg == MIDI_STOP) {
-    changeTransportState(stop);
+    setLKInControlLed(LK_PLAY_PAUSE_PAD, LK_OFF);
+    setLKInControlLed(LK_STOP_PAD, LK_RED);
   }
+
   if(msg == MIDI_START || msg == MIDI_CONTINUE) {
-    changeTransportState(playPause);
+    setLKInControlLed(LK_PLAY_PAUSE_PAD, LK_GREEN);
+    setLKInControlLed(LK_STOP_PAD, LK_OFF);
   }
 }
 
