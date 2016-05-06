@@ -7,7 +7,6 @@ const byte MIDI_CONTINUE = 0xFB;
 const byte MIDI_STOP = 0xFC;
 
 const byte OCTATRACK_AUTO_CH = 10;
-const byte MOTHER_CH = 2;
 
 // LaunchKey Mini InControl Pads (including round pads)
 // Row 1: 0x60 ... 0x68
@@ -77,13 +76,13 @@ void onNoteOn(byte channel, byte note, byte velocity) {
       changeTransportState(stop);
       break;
     }
-  } else if(channel != MOTHER_CH && (channel != OCTATRACK_AUTO_CH || ( note < 33 || note > 35 ))) {
+  } else if(channel != OCTATRACK_AUTO_CH || ( note < 33 || note > 35 )) {
     usbMIDI.sendNoteOn(note, velocity, channel);
   }
 }
 
 void onNoteOff(byte channel, byte note, byte velocity) {
-  if((channel != LK_INCONTROL_CH) && (channel != MOTHER_CH && (channel != OCTATRACK_AUTO_CH || ( note < 33 || note > 35 )))) {
+  if((channel != LK_INCONTROL_CH) && (channel != OCTATRACK_AUTO_CH || ( note < 33 || note > 35 ))) {
     usbMIDI.sendNoteOff(note, velocity, channel);
   }
 }
@@ -199,16 +198,6 @@ void setFwdTransport(bool value) {
 void onRealTimeSystem(byte msg) {
   if(( fwdTransportEnabled && ( msg == MIDI_START || msg == MIDI_STOP || msg == MIDI_CONTINUE )) || msg == MIDI_CLOCK) {
     sendRealTime(msg);
-  }
-
-  if(msg == MIDI_STOP) {
-    setLKInControlLed(LK_PLAY_PAUSE_PAD, LK_OFF);
-    setLKInControlLed(LK_STOP_PAD, LK_RED);
-  }
-
-  if(msg == MIDI_START || msg == MIDI_CONTINUE) {
-    setLKInControlLed(LK_PLAY_PAUSE_PAD, LK_GREEN);
-    setLKInControlLed(LK_STOP_PAD, LK_OFF);
   }
 }
 
