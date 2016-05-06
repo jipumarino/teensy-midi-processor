@@ -7,6 +7,7 @@ const byte MIDI_CONTINUE = 0xFB;
 const byte MIDI_STOP = 0xFC;
 
 const byte OCTATRACK_AUTO_CH = 10;
+const byte MOTHER_CH = 2;
 
 // LaunchKey Mini InControl Pads (including round pads)
 // Row 1: 0x60 ... 0x68
@@ -31,6 +32,8 @@ const byte LK_OFF = 0x00;
 
 bool fwdTransportEnabled = false;
 bool timeLineRTEnabled = true;
+
+int resetLKShortcutCount = 0;
 
 enum TransportState {
   stopped,
@@ -74,13 +77,13 @@ void onNoteOn(byte channel, byte note, byte velocity) {
       changeTransportState(stop);
       break;
     }
-  } else if(channel != OCTATRACK_AUTO_CH || ( note < 33 || note > 35 )) {
+  } else if(channel != MOTHER_CH && (channel != OCTATRACK_AUTO_CH || ( note < 33 || note > 35 ))) {
     usbMIDI.sendNoteOn(note, velocity, channel);
   }
 }
 
 void onNoteOff(byte channel, byte note, byte velocity) {
-  if((channel != LK_INCONTROL_CH) && (channel != OCTATRACK_AUTO_CH || ( note < 33 || note > 35 ))) {
+  if((channel != LK_INCONTROL_CH) && (channel != MOTHER_CH && (channel != OCTATRACK_AUTO_CH || ( note < 33 || note > 35 )))) {
     usbMIDI.sendNoteOff(note, velocity, channel);
   }
 }
@@ -88,9 +91,9 @@ void onNoteOff(byte channel, byte note, byte velocity) {
 void onControlChange(byte channel, byte control, byte value) {
   if(control == LK_UP_ARROW || control == LK_DOWN_ARROW || control == LK_LEFT_ARROW || control == LK_RIGHT_ARROW) {
     if(value == 0) {
-      resetLKShortcut(false);
+      resetLKShortcut(-1);
     } else {
-      resetLKShortcut(true);
+      resetLKShortcut(+1);
     }
   }
 
@@ -99,15 +102,10 @@ void onControlChange(byte channel, byte control, byte value) {
   }
 }
 
-void resetLKShortcut(bool status) {
-  static int resetLKShortcutCount = 0;
-  if(status) {
-    resetLKShortcutCount++;
-    if(resetLKShortcutCount >= 4) {
-      resetLK();
-    }
-  } else {
-    resetLKShortcutCount--;
+void resetLKShortcut(int countChange) {
+  resetLKShortcutCount += countChange;
+  if(resetLKShortcutCount >= 4) {
+    resetLK();
   }
 }
 
