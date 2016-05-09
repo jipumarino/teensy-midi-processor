@@ -6,6 +6,8 @@ const byte MIDI_START = 0xFA;
 const byte MIDI_CONTINUE = 0xFB;
 const byte MIDI_STOP = 0xFC;
 
+const byte MIDI_CC_PORTAMENTO_TIME = 0x05;
+
 const byte OCTATRACK_AUTO_CH = 10;
 
 // LaunchKey Mini InControl Pads (including round pads)
@@ -14,8 +16,9 @@ const byte OCTATRACK_AUTO_CH = 10;
 
 const byte LK_INCONTROL_CH = 1;
 
-const byte LK_TIMELINE_RT_PAD = 0x71;
 const byte LK_FWD_TRANSPORT_PAD = 0x70;
+const byte LK_FWD_PORTAMENTO_PAD = 0x71;
+const byte LK_TIMELINE_RT_PAD = 0x72;
 const byte LK_PLAY_PAUSE_PAD = 0x76;
 const byte LK_STOP_PAD = 0x77;
 
@@ -30,6 +33,7 @@ const byte LK_YELLOW = 0x13;
 const byte LK_OFF = 0x00;
 
 bool fwdTransportEnabled = false;
+bool fwdPortamentoEnabled = false;
 bool timeLineRTEnabled = true;
 
 int resetLKShortcutCount = 0;
@@ -69,6 +73,9 @@ void onNoteOn(byte channel, byte note, byte velocity) {
     case LK_FWD_TRANSPORT_PAD:
       toggleFwdTransport();
       break;
+    case LK_FWD_PORTAMENTO_PAD:
+      toggleFwdPortamento();
+      break;
     case LK_PLAY_PAUSE_PAD:
       changeTransportState(playPause);
       break;
@@ -96,7 +103,7 @@ void onControlChange(byte channel, byte control, byte value) {
     }
   }
 
-  if(channel != LK_INCONTROL_CH) {
+  if(channel != LK_INCONTROL_CH && (control != MIDI_CC_PORTAMENTO_TIME || fwdPortamentoEnabled)) {
     usbMIDI.sendControlChange(control, value, channel);
   }
 }
@@ -112,6 +119,7 @@ void resetLK() {
   enableLKInControl();
   setTimeLineRT(false);
   setFwdTransport(false);
+  setFwdPortamento(false);
   changeTransportState(stop);
 }
 
@@ -175,6 +183,24 @@ void changeTransportState(TransportButton button) {
     setLKInControlLed(LK_STOP_PAD, LK_RED);
     transportState = stopped;
   }
+}
+
+void toggleFwdPortamento() {
+  if(fwdPortamentoEnabled) {
+    setFwdPortamento(false);
+  } else {
+    setFwdPortamento(true);
+  }
+}
+
+void setFwdPortamento(bool value) {
+  if(value) {
+    setLKInControlLed(LK_FWD_PORTAMENTO_PAD, LK_GREEN);
+  } else {
+    setLKInControlLed(LK_FWD_PORTAMENTO_PAD, LK_RED);
+  }
+
+  fwdPortamentoEnabled = value;
 }
 
 void toggleFwdTransport() {
