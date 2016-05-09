@@ -6,8 +6,6 @@ const byte MIDI_START = 0xFA;
 const byte MIDI_CONTINUE = 0xFB;
 const byte MIDI_STOP = 0xFC;
 
-const byte MIDI_CC_PORTAMENTO_TIME = 0x05;
-
 const byte OCTATRACK_AUTO_CH = 10;
 
 // LaunchKey Mini InControl Pads (including round pads)
@@ -17,7 +15,7 @@ const byte OCTATRACK_AUTO_CH = 10;
 const byte LK_INCONTROL_CH = 1;
 
 const byte LK_FWD_TRANSPORT_PAD = 0x70;
-const byte LK_FWD_PORTAMENTO_PAD = 0x71;
+const byte LK_MOTHER_PORTAMENTO_PAD = 0x71;
 const byte LK_TIMELINE_RT_PAD = 0x72;
 const byte LK_PLAY_PAUSE_PAD = 0x76;
 const byte LK_STOP_PAD = 0x77;
@@ -33,7 +31,7 @@ const byte LK_YELLOW = 0x13;
 const byte LK_OFF = 0x00;
 
 bool fwdTransportEnabled = false;
-bool fwdPortamentoEnabled = false;
+bool motherPortamentoEnabled = true;
 bool timeLineRTEnabled = true;
 
 int resetLKShortcutCount = 0;
@@ -73,8 +71,8 @@ void onNoteOn(byte channel, byte note, byte velocity) {
     case LK_FWD_TRANSPORT_PAD:
       toggleFwdTransport();
       break;
-    case LK_FWD_PORTAMENTO_PAD:
-      toggleFwdPortamento();
+    case LK_MOTHER_PORTAMENTO_PAD:
+      toggleMotherPortamento();
       break;
     case LK_PLAY_PAUSE_PAD:
       changeTransportState(playPause);
@@ -103,7 +101,7 @@ void onControlChange(byte channel, byte control, byte value) {
     }
   }
 
-  if(channel != LK_INCONTROL_CH && (control != MIDI_CC_PORTAMENTO_TIME || fwdPortamentoEnabled)) {
+  if(channel != LK_INCONTROL_CH) {
     usbMIDI.sendControlChange(control, value, channel);
   }
 }
@@ -119,7 +117,7 @@ void resetLK() {
   enableLKInControl();
   setTimeLineRT(false);
   setFwdTransport(false);
-  setFwdPortamento(false);
+  setMotherPortamento(true);
   changeTransportState(stop);
 }
 
@@ -185,22 +183,28 @@ void changeTransportState(TransportButton button) {
   }
 }
 
-void toggleFwdPortamento() {
-  if(fwdPortamentoEnabled) {
-    setFwdPortamento(false);
+void toggleMotherPortamento() {
+  if(motherPortamentoEnabled) {
+    setMotherPortamento(false);
   } else {
-    setFwdPortamento(true);
+    setMotherPortamento(true);
   }
 }
 
-void setFwdPortamento(bool value) {
+void setMotherPortamento(bool value) {
+  static int sysexLength = 83;
+  static uint8_t onSysex[] = { 0xF0, 0x00, 0x01, 0x73, 0x7E, 0x00, 0x06, 0x00, 0x00, 0x00, 0x0F, 0x14, 0x00, 0x01, 0x40, 0x25, 0x00, 0x3F, 0x01, 0x00, 0x02, 0x02, 0x08, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x65, 0xF7 };
+  static uint8_t offSysex[] = { 0xF0, 0x00, 0x01, 0x73, 0x7E, 0x00, 0x06, 0x00, 0x00, 0x00, 0x0F, 0x14, 0x00, 0x01, 0x40, 0x25, 0x00, 0x3F, 0x01, 0x00, 0x02, 0x02, 0x08, 0x00, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x45, 0xF7 };
+
   if(value) {
-    setLKInControlLed(LK_FWD_PORTAMENTO_PAD, LK_GREEN);
+    usbMIDI.sendSysEx(sysexLength, onSysex);
+    setLKInControlLed(LK_MOTHER_PORTAMENTO_PAD, LK_GREEN);
   } else {
-    setLKInControlLed(LK_FWD_PORTAMENTO_PAD, LK_RED);
+    usbMIDI.sendSysEx(sysexLength, offSysex);
+    setLKInControlLed(LK_MOTHER_PORTAMENTO_PAD, LK_RED);
   }
 
-  fwdPortamentoEnabled = value;
+  motherPortamentoEnabled = value;
 }
 
 void toggleFwdTransport() {
